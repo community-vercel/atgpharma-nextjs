@@ -28,7 +28,7 @@ export default async (req, res) => {
     first_name: firstName,
     last_name: lastName,
     company_name: company,
-    email: 'anisuldev@gmail.com',
+    email: 'adeel@sharplogician.com',
     phone_number: phone,
     source: source,
     lead_sdr: leadSrc,
