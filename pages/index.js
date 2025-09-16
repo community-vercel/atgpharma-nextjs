@@ -19,6 +19,7 @@ import {TestimonialCard, TestimonialCardWithImg } from "../components/Testimonia
 import HomePageData from "../data/home";
 import ATGCarousel from "../components/ATGCarousel/ATGCarousel";
 import React from "react";
+import Build from "./build";
 
 const clientTestimonialCarouselConfig = {
   desktop: {
@@ -80,8 +81,9 @@ export default function Home() {
       <SEOHead data={seo} />
       <MobileView />
       <div className="hidden md:block">
-        <PageContainer>
-          <div className="h-100 relative">
+        {/* <PageContainer> */}
+          <Build/>
+          {/* <div className="h-100 relative">
             <Image
               src="/Home/Home_Page_Hero.jpg"
               alt="Picture of the author"
@@ -155,8 +157,8 @@ export default function Home() {
             sectionStyles={{ marginTop: "1rem" }} 
             gridStyles={{ justifyContent: "center", marginBottom: "1rem" }}
           />
-          <CTAWButton data={CTAwButton} />
-        </PageContainer>
+          <CTAWButton data={CTAwButton} /> */}
+        {/* </PageContainer> */}
       </div>
     </div>
   );
