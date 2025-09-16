@@ -6,7 +6,7 @@ module.exports = {
     SENDGRID_API_KEY: "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",
     DEMO_BOOKING_SG_TEMPLATE: "d-01c6bebc75074f86adc27b9c1fd3c88a",
     DEMO_BOOKING_SG_FROM_EMAIL: "no-reply@em5111.request.atgpharma.com",
-    DEMO_BOOKING_SG_TO_EMAIL: "marketing@atgpharma.com"
+    DEMO_BOOKING_SG_TO_EMAIL: "adeel@sharplogician.com"
   },
   async redirects() {
     return [
