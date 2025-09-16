@@ -160,7 +160,6 @@ function Build() {
       <Selection
         data={OPTIONS.output}
         state={Object.entries(container[1]?.outputs)[output]}
-        setState={setOutput}
         setState={(e) =>
           setOutput(
             Object.entries(container[1]?.outputs).findIndex(

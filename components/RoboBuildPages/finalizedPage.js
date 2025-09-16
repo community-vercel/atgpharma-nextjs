@@ -20,6 +20,7 @@ import ContactData from "./formInputs";
 function FinalizedPage() {
   const { register, handleSubmit, errors, setValue, clearErrors } = useForm();
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const {
     setImageRoot,
     addBuild,
@@ -46,33 +47,215 @@ function FinalizedPage() {
   }, []);
 
   const contactSubmit = async (data) => {
+    // Validate email
+    if (!data.email) {
+      setErrorMessage("Email is required to send the submission.");
+      setIsLoading(false);
+      return;
+    }
+
     let location = JSON.parse(JSON.stringify(geo));
     data.build = machines;
     data.leadSrc = cookies.leadSrc ? cookies.leadSrc : "";
     data.lat = location?.split(",")[0] ?? null;
     data.long = location?.split(",")[1] ?? null;
     setIsLoading(true);
+    setErrorMessage("");
+
+    // Log form data for debugging
+    console.log("Form data submitted:", data);
+
     try {
-      const res = await fetch("./api/build", {
+      // Submit build data
+      const buildRes = await fetch("./api/build", {
         method: "post",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
-      if (res.status === 200) {
+
+      if (buildRes.status === 200) {
         submit();
+
+        // Format build details for email
+        const buildDetailsHtml = machines
+          .map((machine, index) => `
+            <h3 style="color: #1a73e8; font-size: 18px; margin: 10px 0;">
+              Build ${index + 1}: ${
+                machine.productType === "Candies" ? "Gummies" : machine.productType
+              } Filling Set-up
+            </h3>
+            <ul style="list-style-type: disc; margin-left: 20px; color: #333;">
+              <li>${machine.vesselSize} Pressure Vessel</li>
+              <li>8000D Pressure Controller</li>
+              <li>12 psi Point of Use Filter Regulator</li>
+              ${
+                machine.heating
+                  ? "<li>Heating Jacket and Tubing Wraps</li><li>Heating Controllers</li>"
+                  : ""
+              }
+              <li>${machine.nozzle} Dispense Nozzle Setups</li>
+            </ul>
+          `)
+          .join("");
+
+        const buildDetailsText = machines
+          .map(
+            (machine, index) =>
+              `Build ${index + 1}: ${
+                machine.productType === "Candies" ? "Gummies" : machine.productType
+              }\n- ${machine.vesselSize} Pressure Vessel\n- 8000D Pressure Controller\n- 12 psi Point of Use Filter Regulator\n${
+                machine.heating
+                  ? "- Heating Jacket and Tubing Wraps\n- Heating Controllers\n"
+                  : ""
+              }- ${machine.nozzle} Dispense Nozzle Setups`
+          )
+          .join("\n\n");
+
+        // User email data (with intro and thank-you)
+        const userEmailData = {
+          to: data.email,
+          from: '"ATG Pharma" <support@sharplogician.com>',
+          subject: 'Thank You for Your ATG Pharma Build Submission',
+          text: `Thank you for your submission to ATG Pharma!\n\nAbout ATG Pharma:\nNorth American manufacturer of high-quality bench-top filling and packaging automation equipment designed for a broad range of products such as vape cartridges, capsules, bottles, balms, and more.\n\nYour Build Details:\n${buildDetailsText}\n\nContact Information:\nName: ${
+            data.name || "N/A"
+          }\nEmail: ${data.email}\nCompany: ${data.company || "N/A"}\n\nWe will review your submission and get back to you soon!\nATG Pharma Team`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+              <div style="text-align: center; padding: 10px;">
+                <img src="https://atgpharma.com/wp-content/uploads/2024/11/atg-footer-logo.png" alt="ATG Pharma Logo" style="max-width: 150px;" />
+              </div>
+              <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h1 style="color: #1a73e8; font-size: 24px; margin: 0 0 10px;">Thank You for Your Submission!</h1>
+                <p style="color: #333; font-size: 16px; line-height: 1.5;">
+                  Dear ${data.name || "Customer"},
+                </p>
+                <p style="color: #333; font-size: 16px; line-height: 1.5;">
+                  Thank you for choosing ATG Pharma, a North American manufacturer of high-quality bench-top filling and packaging automation equipment designed for a broad range of products such as vape cartridges, capsules, bottles, balms, and more.
+                </p>
+                <p style="color: #333; font-size: 16px; line-height: 1.5;">
+                  We have received your build submission, and our team will review it shortly. Below are the details of your submission:
+                </p>
+                ${buildDetailsHtml}
+                <h3 style="color: #1a73e8; font-size: 18px; margin: 10px 0;">Your Contact Information</h3>
+                <p style="color: #333; font-size: 16px; line-height: 1.5;">
+                  <strong>Name:</strong> ${data.name || "N/A"}<br />
+                  <strong>Email:</strong> ${data.email}<br />
+                  <strong>Company:</strong> ${data.company || "N/A"}
+                </p>
+                <p style="color: #333; font-size: 16px; line-height: 1.5;">
+                  We appreciate your interest in ATG Pharma. Our team will contact you soon to discuss your requirements further.
+                </p>
+                <p style="color: #333; font-size: 16px; line-height: 1.5;">
+                  Best regards,<br />
+                  The ATG Pharma Team
+                </p>
+              </div>
+              <div style="text-align: center; padding: 10px; color: #777; font-size: 12px;">
+                &copy; ${new Date().getFullYear()} ATG Pharma. All rights reserved.<br />
+                <a href="https://www.atgpharma.com" style="color: #1a73e8; text-decoration: none;">Visit our website</a>
+              </div>
+            </div>
+          `,
+        };
+
+        // Owner email data (data only, no intro or thank-you)
+        const ownerEmailData = {
+          to: ["support@sharplogician.com", "adeel@sharplogician.com"],
+          from: '"ATG Pharma" <support@sharplogician.com>',
+          subject: 'New Build Submission Received',
+          text: `New Build Submission:\n\nBuild Details:\n${buildDetailsText}\n\n
+          }\nEmail: ${data.email}\nCompany: ${data.company || "N/A"}\nLead Source: ${
+            data.leadSrc || "N/A"
+          }\nLatitude: ${data.lat || "N/A"}\nLongitude: ${data.long || "N/A"}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+              <div style="text-align: center; padding: 10px;">
+                <img src="https://atgpharma.com/wp-content/uploads/2024/11/atg-footer-logo.png" alt="ATG Pharma Logo" style="max-width: 150px;" />
+              </div>
+              <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h1 style="color: #1a73e8; font-size: 24px; margin: 0 0 10px;">New Build Submission</h1>
+                <p style="color: #333; font-size: 16px; line-height: 1.5;">
+                  A new build submission has been received with the following details:
+                </p>
+                ${buildDetailsHtml}
+                <h3 style="color: #1a73e8; font-size: 18px; margin: 10px 0;">Contact Information</h3>
+                <p style="color: #333; font-size: 16px; line-height: 1.5;">
+                  <strong>Name:</strong> ${data.name || "N/A"}<br />
+                  <strong>Email:</strong> ${data.email}<br />
+                  <strong>Company:</strong> ${data.company || "N/A"}<br />
+                  <strong>Lead Source:</strong> ${data.leadSrc || "N/A"}<br />
+                  <strong>Latitude:</strong> ${data.lat || "N/A"}<br />
+                  <strong>Longitude:</strong> ${data.long || "N/A"}
+                </p>
+              </div>
+              <div style="text-align: center; padding: 10px; color: #777; font-size: 12px;">
+                &copy; ${new Date().getFullYear()} ATG Pharma. All rights reserved.<br />
+                <a href="https://www.atgpharma.com" style="color: #1a73e8; text-decoration: none;">Visit our website</a>
+              </div>
+            </div>
+          `,
+        };
+
+        console.log('Sending user email to:', userEmailData.to);
+        console.log('Sending owner email to:', ownerEmailData.to);
+
+        // Send user email
+        const userEmailRes = await fetch("./api/sendEmail", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(userEmailData),
+        });
+
+        const userEmailResult = await userEmailRes.json();
+        console.log('User email API response:', userEmailResult);
+
+        // Send owner email
+        const ownerEmailRes = await fetch("./api/sendEmail", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(ownerEmailData),
+        });
+
+        const ownerEmailResult = await ownerEmailRes.json();
+        console.log('Owner email API response:', ownerEmailResult);
+
+        if (userEmailRes.status !== 200 || ownerEmailRes.status !== 200) {
+          console.error('Email sending failed:', { user: userEmailResult, owner: ownerEmailResult });
+          setErrorMessage("Failed to send email. Please try again.");
+        } else {
+          setErrorMessage("Submission sent successfully! Check your email for confirmation.");
+        }
       } else {
-        console.log("wrong email");
+        console.log("Build submission failed");
+        setErrorMessage("Build submission failed. Please try again.");
       }
       setIsLoading(false);
-    } catch (err) {}
+    } catch (err) {
+      console.error('Error:', err);
+      setErrorMessage("An error occurred. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   return (
     <main className="w-full lg:col-span-7">
       <Header />
-      <div className=" flex flex-col items-center justify-center lg:w-4/5 mx-auto">
+      <div className="flex flex-col items-center justify-center lg:w-4/5 mx-auto">
+        {errorMessage && (
+          <div
+            className={`text-center mb-4 ${
+              errorMessage.includes("successfully") ? "text-green-500" : "text-red-500"
+            }`}
+          >
+            {errorMessage}
+          </div>
+        )}
         <div className="mt-24 mb-4 w-full flex px-1 lg:px-0 self-center flex-col text-center bg-card rounded-3xl shadow">
           <div className="flex flex-row justify-around items-center">
             <img
@@ -80,7 +263,7 @@ function FinalizedPage() {
               alt="Picture of the author"
               width={120}
               height={120}
-              className="transform -translate-y-2/4	self-center"
+              className="transform -translate-y-2/4 self-center"
             />
           </div>
           <div className=" -mt-9 flex flex-col pb-8">
@@ -99,11 +282,11 @@ function FinalizedPage() {
           <div className="flex flex-col justify center">
             <button
               onClick={() => editBuild(currentIndex)}
-              className="text-center col-span-1 inline-flex items-center justify-center  px-8 py-2 border-2 border-transparent hover:border-atgBlue rounded-full shadow-sm bg-gradient-to-r from-buttonStart to-atgBlue hover:from-white hover:to-white text-md font-medium text-white hover:text-atgBlue underline"
+              className="text-center col-span-1 inline-flex items-center justify-center px-8 py-2 border-2 border-transparent hover:border-atgBlue rounded-full shadow-sm bg-gradient-to-r from-buttonStart to-atgBlue hover:from-white hover:to-white text-md font-medium text-white hover:text-atgBlue underline"
             >
               <span className="pr-2">EDIT</span>
               <svg
-                className="h-5 w-5 "
+                className="h-5 w-5"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
                 fill="currentColor"
@@ -115,13 +298,12 @@ function FinalizedPage() {
               onClick={() => deleteBuild(currentIndex)}
               className="text-atgBlue underline text-xs pt-1 hover:text-gray-500"
             >
-              {" "}
               REMOVE
             </button>
           </div>
           <button
             onClick={() => addBuild()}
-            className="text-center col-span-1 inline-flex items-center justify-center  px-8 py-2 border-2 border-transparent hover:border-atgBlue rounded-full shadow-sm bg-gradient-to-r from-buttonStart to-atgBlue hover:from-white hover:to-white text-md font-medium text-white hover:text-atgBlue underline"
+            className="text-center col-span-1 inline-flex items-center justify-center px-8 py-2 border-2 border-transparent hover:border-atgBlue rounded-full shadow-sm bg-gradient-to-r from-buttonStart to-atgBlue hover:from-white hover:to-white text-md font-medium text-white hover:text-atgBlue underline"
           >
             <span className="pr-2">ADD-SET-UP</span>
             <svg
